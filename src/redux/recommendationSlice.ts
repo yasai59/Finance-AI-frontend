@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axiosClient from '../helpers/axiosClient'; // Asegúrate de tener un cliente Axios configurado
-import InvestmentRecommendations from '../components/InvestmentRecommendations';
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import axiosClient from "../helpers/axiosClient"; // Asegúrate de tener un cliente Axios configurado
+import InvestmentRecommendations from "../components/InvestmentRecommendations";
 
 // Define la interfaz para una recomendación
 interface Recommendation {
@@ -25,26 +25,32 @@ const initialState: RecommendationsState = {
 
 // Thunk para obtener recomendaciones desde la API
 export const fetchRecommendations = createAsyncThunk(
-  'recommendations/fetchRecommendations',
+  "recommendations/fetchRecommendations",
   async () => {
-    const updateUser = await axiosClient.get('/update-profile')
-    const advice = await axiosClient.get('/advice')
-    const recommendations  = await axiosClient.get('/get-recommendations');
+    const updateUser = await axiosClient.get("/update-profile");
+    let advice = null;
+    let recommendations = null;
+    recommendations = await axiosClient.get("/get-recommendations");
+
+    try {
+      advice = await axiosClient.get("/advice");
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+    }
 
     const finalRecommendation: RecommendationsState = {
       financialScore: updateUser.data.data.financial_score,
       riskScore: updateUser.data.data.risk_score,
-      investingRecommendation: advice.data.data,
-      recommendations: recommendations.data.data
-    }
+      investingRecommendation: advice?.data.data || null,
+      recommendations: recommendations.data.data,
+    };
 
-    return finalRecommendation
-
-  }
+    return finalRecommendation;
+  },
 );
 
 const recommendationsSlice = createSlice({
-  name: 'recommendations',
+  name: "recommendations",
   initialState,
   reducers: {
     addRecommendation: (state, action: PayloadAction<Recommendation>) => {
@@ -62,17 +68,22 @@ const recommendationsSlice = createSlice({
       .addCase(fetchRecommendations.pending, (state) => {
         // Opcional: puedes manejar un estado de carga aquí
       })
-      .addCase(fetchRecommendations.fulfilled, (state, action: PayloadAction<RecommendationsState>) => {
-        state.financialScore = action.payload.financialScore;
-        state.riskScore = action.payload.riskScore;
-        state.recommendations = action.payload.recommendations;
-        state.investingRecommendation = action.payload.investingRecommendation;
-      })
+      .addCase(
+        fetchRecommendations.fulfilled,
+        (state, action: PayloadAction<RecommendationsState>) => {
+          state.financialScore = action.payload.financialScore;
+          state.riskScore = action.payload.riskScore;
+          state.recommendations = action.payload.recommendations;
+          state.investingRecommendation =
+            action.payload.investingRecommendation;
+        },
+      )
       .addCase(fetchRecommendations.rejected, (state, action) => {
-        console.error('Error fetching recommendations:', action.error.message);
+        console.error("Error fetching recommendations:", action.error.message);
       });
   },
 });
 
-export const { addRecommendation, removeRecommendation, clearRecommendations } = recommendationsSlice.actions;
+export const { addRecommendation, removeRecommendation, clearRecommendations } =
+  recommendationsSlice.actions;
 export default recommendationsSlice.reducer;
